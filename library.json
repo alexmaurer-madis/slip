@@ -1,0 +1,24 @@
+{
+  "name": "slip",
+  "version": "1.0.0",
+  "keywords": "slip protocol encoder decoder",
+  "description": "This library can encode/decode SLIP frames. The SLIP protocol is a way to encapsulate binary data for serial transmission.",
+  "authors": {
+    "name": "Alexandre Maurer",
+    "url": "https://github.com/alexmaurer-madis",
+    "maintainer": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexmaurer-madis/slip"
+  },
+  "homepage": "https://github.com/alexmaurer-madis/slip",
+  "export": {
+    "exclude": []
+  },
+
+  "license": "MIT",
+  "frameworks": "arduino",
+  "platforms": "*",
+  "headers": ["slip.h"]
+}
