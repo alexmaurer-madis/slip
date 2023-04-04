@@ -12,6 +12,16 @@ It does not provide :
   
 Because the protocol does so little, though, it is usually very easy to implement and lightweight.
 
+# Disclaimer
+
+I used this packet framing method for several of my projects. I push the code to Github to be able to reuse my code between new projects.
+
+Currently :
+- No usage examples are provided
+- The class contain two internal fixed buffers :
+  - char dataDecoded[255];
+  - char dataEncoded[255];
+- Improvement can be made such as inheriting from Stream Class
 
 ##  Description of control bytes
 
