@@ -12,11 +12,8 @@
 Slip::Slip() : Slip(255, 255){};
 
 Slip::Slip(uint16_t rx_buffer_size, uint16_t tx_buffer_size) {
-
-  decoding_buffer = std::make_shared<std::vector<char>>(rx_buffer_size);
-  std::cout << "capacity " << decoding_buffer->capacity() << std::endl;
-  encoding_buffer = std::make_shared<std::vector<char>>(tx_buffer_size);
-  std::cout << "capacity " << encoding_buffer->capacity() << std::endl;
+  decoding_buffer = std::make_unique<std::vector<char>>(rx_buffer_size);
+  encoding_buffer = std::make_unique<std::vector<char>>(tx_buffer_size);
 }
 
 Slip::~Slip() {
@@ -114,11 +111,10 @@ uint16_t Slip::unpack(char b) {
  *
  * @param src data source to pack
  * @param len data size
- * @return uint16_t
+ * @return uint16_t size of packed data
  */
-uint16_t Slip::packedSize(char *src, uint16_t len) {
-  // 2 bytes for the packet delimiters (0xC0 and the beginning and end of
-  // packet)
+uint16_t Slip::PackedSize(char *src, uint16_t len) {
+  // 2 bytes for the packet delimiters
   uint32_t ret = 2;
 
   // Every byte that must be escaped in the data will take 2 bytes after packing
@@ -132,7 +128,7 @@ uint16_t Slip::packedSize(char *src, uint16_t len) {
   }
 
   if (ret > 0xFFFF)
-    throw std::overflow_error("Packed size is bigger than 0xFFFF");
+    throw std::overflow_error("Packed size is bigger than uint16_t");
 
   return ret;
 }
@@ -145,8 +141,8 @@ uint16_t Slip::packedSize(char *src, uint16_t len) {
  * @param len data len to process
  * @return uint16_t return len of data written to the dst buffer
  */
-uint16_t Slip::pack(char *src, char *dst, uint16_t len) {
-  if (len <= 0)
+uint16_t Slip::Pack(char *src, char *dst, uint16_t src_len) {
+  if (src_len <= 0)
     return 0;
 
   char *start = dst;
@@ -154,7 +150,7 @@ uint16_t Slip::pack(char *src, char *dst, uint16_t len) {
   // Starting of frame
   *dst++ = SLIP_FEND;
 
-  while (len--) {
+  while (src_len--) {
     if (*src == SLIP_FEND) {
       *dst++ = SLIP_FESC;
       *dst++ = SLIP_TFEND;

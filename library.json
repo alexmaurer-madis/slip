@@ -16,9 +16,10 @@
   "export": {
     "exclude": []
   },
-
   "license": "MIT",
   "frameworks": "arduino",
   "platforms": "*",
-  "headers": ["slip.h"]
+  "headers": [
+    "slip.hpp"
+  ]
 }

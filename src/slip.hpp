@@ -12,8 +12,6 @@
 #ifndef __ALEXMAURER_SLIP_H
 #define __ALEXMAURER_SLIP_H
 
-#include <cstdint>
-#include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -32,11 +30,11 @@ public:
   uint16_t unpack(char b);
   uint16_t unpack(char *data, uint16_t len);
 
-  uint16_t packedSize(char *src, uint16_t len);
-  uint16_t pack(char *src, char *dst, uint16_t len);
+  uint16_t PackedSize(char *src, uint16_t src_len);
+  uint16_t Pack(char *src, char *dst, uint16_t src_len);
 
-  std::shared_ptr<std::vector<char>> decoding_buffer;
-  std::shared_ptr<std::vector<char>> encoding_buffer;
+  std::unique_ptr<std::vector<char>> decoding_buffer;
+  std::unique_ptr<std::vector<char>> encoding_buffer;
 
 private:
   // Flags
