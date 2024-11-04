@@ -7,11 +7,25 @@
  * @license MIT
  *
  */
-#include "slip.h"
+#include "slip.hpp"
+
+Slip::Slip() : Slip(255, 255){};
+
+Slip::Slip(uint16_t rx_buffer_size, uint16_t tx_buffer_size) {
+
+  decoding_buffer = std::make_shared<std::vector<char>>(rx_buffer_size);
+  std::cout << "capacity " << decoding_buffer->capacity() << std::endl;
+  encoding_buffer = std::make_shared<std::vector<char>>(tx_buffer_size);
+  std::cout << "capacity " << encoding_buffer->capacity() << std::endl;
+}
+
+Slip::~Slip() {
+  decoding_buffer.reset();
+  encoding_buffer.reset();
+}
 
 /**
- * @brief Try to unpack a complete frame. Only the first frame in buffer will be
- * processed by this function. The remaining data will not be processed.
+ * @brief Try to unpack from a buffer of size len.
  *
  * @param data
  * @param len
@@ -22,8 +36,8 @@ uint16_t Slip::unpack(char *data, uint16_t len) {
   if (len <= 0)
     return 0;
 
-  inPacket_ = 0;
-  inEscape_ = 0;
+  // inPacket_ = 0;
+  // inEscape_ = 0;
 
   while (len--) {
     uint16_t ret = unpack(*data++);
@@ -42,51 +56,52 @@ uint16_t Slip::unpack(char *data, uint16_t len) {
  * @return uint16_t len of frame decoded
  */
 uint16_t Slip::unpack(char b) {
-  // Serial.printf("%02X-", b);
-
   if (inPacket_ && inEscape_) {
     inEscape_ = false;
 
-    // In escape mode, only TFEND or TFESC can be received. Otherwise, discard
-    // all data !
+    // In escape mode, only TFEND or TFESC can be received otherwise discard
+    // char and pending data in buffer
     switch (b) {
     case SLIP_TFEND:
-      *p_++ = SLIP_FEND;
+      decoding_buffer->push_back(SLIP_FEND);
       break;
 
     case SLIP_TFESC:
-      *p_++ = SLIP_FESC;
+      decoding_buffer->push_back(SLIP_FESC);
       break;
 
     default: {
-      inPacket_ = 0;
-      inEscape_ = 0;
-      p_ = dataDecoded;
+      inPacket_ = false;
+      inEscape_ = false;
+      unpack_index_ = 0;
     } break;
     }
-  } else if (inPacket_) {
+  }
+  // Not in escape mode but already inside packet
+  else if (inPacket_) {
     switch (b) {
     case SLIP_FESC:
       inEscape_ = true;
       break;
 
+    // end of packet
     case SLIP_FEND: {
-      uint16_t frameLen = p_ - dataDecoded;
-      if (frameLen > 0) {
+      if (unpack_index_ > 0) {
         inPacket_ = false;
-        p_ = dataDecoded;
-        return frameLen;
+        return decoding_buffer->size();
       }
     } break;
 
+    // Append char as-is
     default:
-      *p_++ = b;
+      decoding_buffer->push_back(b);
       break;
     }
   } else {
+    // Beginning of packet
     if (b == SLIP_FEND) {
       inPacket_ = true;
-      p_ = dataDecoded;
+      decoding_buffer->clear();
     }
   }
 
@@ -97,14 +112,14 @@ uint16_t Slip::unpack(char b) {
  * @brief Return the calculated size that would be occupied after packing with
  * SLIP protocol
  *
- * @param src
- * @param len
+ * @param src data source to pack
+ * @param len data size
  * @return uint16_t
  */
 uint16_t Slip::packedSize(char *src, uint16_t len) {
   // 2 bytes for the packet delimiters (0xC0 and the beginning and end of
   // packet)
-  uint16_t ret = 2;
+  uint32_t ret = 2;
 
   // Every byte that must be escaped in the data will take 2 bytes after packing
   while (len--) {
@@ -116,15 +131,18 @@ uint16_t Slip::packedSize(char *src, uint16_t len) {
     src++;
   }
 
+  if (ret > 0xFFFF)
+    throw std::overflow_error("Packed size is bigger than 0xFFFF");
+
   return ret;
 }
 
 /**
  * @brief Read src data, pack and write result into dst.
  *
- * @param src pointer to data to be packed
- * @param dst pointer to output buffer
- * @param len len of data to process
+ * @param src data source to be packed
+ * @param dst destination buffer for packed data
+ * @param len data len to process
  * @return uint16_t return len of data written to the dst buffer
  */
 uint16_t Slip::pack(char *src, char *dst, uint16_t len) {
